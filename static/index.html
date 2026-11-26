@@ -1,135 +1,97 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NIFTY 50 • 1-Day Options Engine</title>
+<title>NIFTY 50 Enhanced Breakout Engine</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#07101c;color:#eaf2ff;font-family:Inter,Arial,sans-serif}
-.wrap{max-width:1400px;margin:auto;padding:28px}.top{display:flex;justify-content:space-between;align-items:center;gap:20px;border-bottom:1px solid #1c2a3d;padding-bottom:22px}
-h1{margin:0;font-size:32px}.sub{color:#8fa5c2;margin-top:7px}.controls{display:flex;gap:10px}
-button,select{background:#122033;color:#fff;border:1px solid #2a3c55;border-radius:10px;padding:11px 16px;font-size:14px}
-button{background:#1769ff;border-color:#1769ff;cursor:pointer;font-weight:700}.grid{display:grid;grid-template-columns:1.35fr .65fr;gap:18px;margin-top:20px}
-.card{background:#0c1725;border:1px solid #1d2d42;border-radius:16px;padding:22px}.signal{font-size:68px;font-weight:900;margin:8px 0}
-.call{color:#21d6a5}.put{color:#ff667a}.wait{color:#ffc34d}.muted{color:#91a4bd}
-.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}.metric{background:#111f30;border-radius:12px;padding:14px}.metric b{display:block;font-size:20px;margin-top:5px}
-.levels{display:grid;grid-template-columns:1fr 1fr;gap:10px}.level{background:#111f30;border-radius:12px;padding:16px}.level span{display:block;color:#91a4bd;font-size:13px}.level strong{font-size:22px;display:block;margin-top:6px}
-.status{margin-top:18px;padding:13px 15px;background:#101f31;border-left:3px solid #1769ff;border-radius:8px}
-table{width:100%;border-collapse:collapse;margin-top:14px}th,td{text-align:left;padding:12px;border-bottom:1px solid #203044}th{color:#91a4bd;font-size:12px}
-.full{margin-top:18px}.error{color:#ff667a;background:#28121a;border:1px solid #57202d;padding:14px;border-radius:10px}
-@media(max-width:900px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.top{align-items:flex-start;flex-direction:column}}
+body{margin:0;background:#070d17;color:#f4f7fb;font-family:Arial,sans-serif}
+.wrap{max-width:1400px;margin:auto;padding:28px}
+h1{margin:0 0 8px;font-size:34px}.sub{color:#8ea3c0;margin-bottom:24px}
+.grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px}
+.card{background:#0d1624;border:1px solid #203047;border-radius:18px;padding:22px}
+.signal{font-size:62px;font-weight:800;margin:15px 0}.wait{color:#f5b942}.call{color:#20c997}.put{color:#ff5c67}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:20px}
+.metric{background:#111e2e;border-radius:12px;padding:15px}.label{color:#8ea3c0;font-size:13px}.value{font-size:20px;font-weight:700;margin-top:5px}
+.level{font-size:30px;font-weight:800;margin:8px 0 18px}
+.res{color:#ff6872}.sup{color:#20c997}
+button{background:#1769ff;color:white;border:0;border-radius:10px;padding:13px 20px;font-weight:700;cursor:pointer}
+table{width:100%;border-collapse:collapse;margin-top:12px}td,th{padding:10px;border-bottom:1px solid #203047;text-align:left}th{color:#8ea3c0}
+.ok{color:#20c997}.bad{color:#ff6872}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 <div class="wrap">
-<header class="top">
-<div><h1>NIFTY 50 • 1-Day Options Engine</h1><div class="sub">Trendline + breakout + retest + confirmation • Render ready</div></div>
-<div class="controls"><select id="interval"><option>5m</option><option>15m</option><option>30m</option></select><button onclick="scan()">Refresh Signal</button></div>
-</header>
-
-<div id="error"></div>
-<section class="grid">
+<h1>NIFTY 50 • Enhanced Breakout Engine</h1>
+<div class="sub">5-minute support/resistance + breakout + retest + trend confirmation</div>
+<button onclick="loadScan()">Refresh Signal</button>
+<div id="err"></div>
+<div class="grid" style="margin-top:18px">
 <div class="card">
-<div class="muted">CURRENT SIGNAL</div>
+<div class="label">CURRENT SIGNAL</div>
 <div id="signal" class="signal wait">WAIT</div>
-<div id="confidence" class="muted">Confidence —</div>
-<div id="scores" class="muted">CALL —/11 • PUT —/11</div>
+<div id="reason" class="sub">Loading...</div>
 <div class="metrics">
-<div class="metric">NIFTY<b id="spot">—</b></div>
-<div class="metric">VWAP<b id="vwap">—</b></div>
-<div class="metric">EMA 20<b id="ema20">—</b></div>
-<div class="metric">EMA 50<b id="ema50">—</b></div>
-<div class="metric">ADX<b id="adx">—</b></div>
-<div class="metric">RSI<b id="rsi">—</b></div>
-<div class="metric">RVOL<b id="rvol">—</b></div>
-<div class="metric">ATR<b id="atr">—</b></div>
+<div class="metric"><div class="label">NIFTY</div><div id="price" class="value">--</div></div>
+<div class="metric"><div class="label">ADX</div><div id="adx" class="value">--</div></div>
+<div class="metric"><div class="label">RSI</div><div id="rsi" class="value">--</div></div>
+<div class="metric"><div class="label">RVOL</div><div id="rvol" class="value">--</div></div>
+<div class="metric"><div class="label">VWAP</div><div id="vwap" class="value">--</div></div>
+<div class="metric"><div class="label">EMA20</div><div id="ema20" class="value">--</div></div>
+<div class="metric"><div class="label">EMA50</div><div id="ema50" class="value">--</div></div>
+<div class="metric"><div class="label">CONFIDENCE</div><div id="conf" class="value">--</div></div>
 </div>
-<div id="reason" class="status">Waiting for scan…</div>
 </div>
-
 <div class="card">
-<div class="muted">OPTION CONTRACT</div>
-<div id="optionTitle" style="font-size:28px;font-weight:800;margin:10px 0">—</div>
-<div class="levels">
-<div class="level"><span>Expiry</span><strong id="expiry">—</strong></div>
-<div class="level"><span>Strike</span><strong id="strike">—</strong></div>
-<div class="level"><span>Option LTP</span><strong id="ltp">—</strong></div>
-<div class="level"><span>Buy Zone</span><strong id="buyzone">—</strong></div>
-<div class="level"><span>Stop</span><strong id="ostop">—</strong></div>
-<div class="level"><span>Target 1</span><strong id="t1">—</strong></div>
-<div class="level"><span>Target 2</span><strong id="t2">—</strong></div>
-<div class="level"><span>OI</span><strong id="oi">—</strong></div>
+<div class="label">KEY CHART LEVELS</div>
+<div class="label">Resistance</div><div id="res" class="level res">--</div>
+<div class="label">Support</div><div id="sup" class="level sup">--</div>
+<div class="label">Trade</div><div id="trade" class="value">WAIT for line confirmation</div>
 </div>
-<div id="optionMsg" class="status">Option data appears after a confirmed CALL/PUT setup.</div>
 </div>
-</section>
-
-<section class="card full">
-<h2>Signal Checks</h2>
-<table><thead><tr><th>Condition</th><th>Status</th></tr></thead><tbody id="checks"><tr><td colspan="2">Run a scan.</td></tr></tbody></table>
-</section>
-
-<section class="card full">
-<h2>Research Backtest</h2>
-<button onclick="backtest()">Run 1-Day Options Backtest</button>
-<div id="bt" class="status">No backtest run yet.</div>
-<table><thead><tr><th>Date</th><th>Side</th><th>Strike</th><th>Spot</th><th>Entry Premium</th><th>Exit Premium</th><th>P&amp;L</th><th>Exit</th></tr></thead>
-<tbody id="trades"><tr><td colspan="8">No trades.</td></tr></tbody></table>
-</section>
+<div class="card" style="margin-top:18px">
+<div class="label">SIGNAL CHECKS</div>
+<table><thead><tr><th>Condition</th><th>Status</th></tr></thead><tbody id="checks"></tbody></table>
 </div>
-
+<div class="card" style="margin-top:18px">
+<div class="label">OPTION CONTRACT</div>
+<div id="option" class="sub">Option data appears only after a confirmed CALL/PUT signal.</div>
+</div>
+</div>
 <script>
-const $=id=>document.getElementById(id);
-function fmt(v){return v==null||v===" "||v===""?"—":v}
-function money(v){return v==null?"—":"₹"+Number(v).toFixed(2)}
-async function scan(){
-  $("error").innerHTML="";
-  try{
-    const interval=$("interval").value;
-    const r=await fetch(`/api/scan?period=10d&interval=${interval}&itm=0`);
-    const d=await r.json();
-    if(!r.ok||d.status==="error") throw new Error(d.error||"Scan failed");
-    const m=d.market||d;
-    const s=m.signal||"WAIT";
-    $("signal").textContent=s;$("signal").className="signal "+s.toLowerCase();
-    $("confidence").textContent=`Confidence ${fmt(m.confidence)}%`;
-    $("scores").textContent=`CALL ${fmt(m.call_score)}/11 • PUT ${fmt(m.put_score)}/11`;
-    $("spot").textContent=fmt(m.nifty);$("vwap").textContent=fmt(m.vwap);
-    $("ema20").textContent=fmt(m.ema20);$("ema50").textContent=fmt(m.ema50);
-    $("adx").textContent=fmt(m.adx);$("rsi").textContent=fmt(m.rsi);
-    $("rvol").textContent=fmt(m.rvol);$("atr").textContent=fmt(m.atr);
-    $("reason").textContent=m.reason||"No qualifying setup.";
-    const checks=m.checks||{};
-    $("checks").innerHTML=Object.entries(checks).map(([k,v])=>`<tr><td>${k}</td><td>${v?"✅ YES":"❌ NO"}</td></tr>`).join("");
-    const o=d.option;
-    if(o){
-      $("optionTitle").textContent=`${o.strike} ${o.type}`;
-      $("expiry").textContent=fmt(o.expiry);$("strike").textContent=fmt(o.strike);
-      $("ltp").textContent=money(o.ltp);
-      $("buyzone").textContent=`₹${o.buy_zone_low} – ₹${o.buy_zone_high}`;
-      $("ostop").textContent=money(o.stop);$("t1").textContent=money(o.target1);$("t2").textContent=money(o.target2);
-      $("oi").textContent=fmt(o.oi);
-      $("optionMsg").textContent=`Volume ${fmt(o.volume)} • Change ${fmt(o.change_pct)}%`;
-    }else{
-      $("optionTitle").textContent="—";
-      $("optionMsg").textContent=d.option_error||"Option data appears after a confirmed CALL/PUT setup.";
-    }
-  }catch(e){$("error").innerHTML=`<div class="error">Error: ${e.message}</div>`}
+async function loadScan(){
+ document.getElementById("err").innerHTML="";
+ try{
+  const r=await fetch("/api/scan");
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error||"Scan failed");
+  const m=d.market;
+  const s=document.getElementById("signal");
+  s.textContent=m.signal;s.className="signal "+(m.signal==="CALL"?"call":m.signal==="PUT"?"put":"wait");
+  document.getElementById("reason").textContent=m.reason;
+  document.getElementById("price").textContent=m.nifty??"--";
+  document.getElementById("adx").textContent=m.adx??"--";
+  document.getElementById("rsi").textContent=m.rsi??"--";
+  document.getElementById("rvol").textContent=m.rvol??"--";
+  document.getElementById("vwap").textContent=m.vwap??"--";
+  document.getElementById("ema20").textContent=m.ema20??"--";
+  document.getElementById("ema50").textContent=m.ema50??"--";
+  document.getElementById("conf").textContent=(m.confidence??"--")+"%";
+  document.getElementById("res").textContent=m.resistance??"--";
+  document.getElementById("sup").textContent=m.support??"--";
+  document.getElementById("trade").textContent=m.signal==="WAIT"?"Wait for confirmed breakout/retest":`NIFTY ${m.signal} @ ${m.nifty_entry}`;
+  const tbody=document.getElementById("checks");tbody.innerHTML="";
+  Object.entries(m.checks||{}).forEach(([k,v])=>{
+   tbody.innerHTML+=`<tr><td>${k}</td><td class="${v?"ok":"bad"}">${v?"PASS":"NO"}</td></tr>`;
+  });
+  const o=d.option;
+  document.getElementById("option").innerHTML=o
+   ? `<b>${o.type} ${o.strike}</b> • Expiry ${o.expiry}<br><br>Buy zone ₹${o.buy_zone_low}–₹${o.buy_zone_high} • LTP ₹${o.ltp}<br>SL ₹${o.stop} • T1 ₹${o.target1} • T2 ₹${o.target2}`
+   : (d.option_error||"No option contract because there is no confirmed signal.");
+ }catch(e){document.getElementById("err").innerHTML=`<div class="card" style="margin-bottom:18px;color:#ff6872">Error: ${e.message}</div>`}
 }
-async function backtest(){
-  $("bt").textContent="Running backtest…";
-  try{
-    const r=await fetch(`/api/backtest?period=30d&interval=${$("interval").value}&itm=0`);
-    const d=await r.json(); if(!r.ok||d.status==="error") throw new Error(d.error||"Backtest failed");
-    const m=d.metrics||{};
-    $("bt").textContent=`Trades ${fmt(m.trades)} • Win rate ${fmt(m.win_rate)}% • Net P&L ${money(m.net_pnl)} • Return ${fmt(m.return_pct)}%`;
-    $("trades").innerHTML=(d.trades||[]).slice(-20).reverse().map(t=>`<tr>
-      <td>${fmt(t.date||t.Date)}</td><td>${fmt(t.side||t.Side)}</td><td>${fmt(t.strike)}</td><td>${fmt(t.spot)}</td>
-      <td>${money(t.entry_premium)}</td><td>${money(t.exit_premium)}</td><td>${money(t.pnl)}</td><td>${fmt(t.exit_reason||t.exit)}</td>
-    </tr>`).join("")||'<tr><td colspan="8">No trades.</td></tr>';
-  }catch(e){$("bt").innerHTML=`<div class="error">Backtest error: ${e.message}</div>`}
-}
-scan();
+loadScan();
 </script>
 </body>
 </html>
