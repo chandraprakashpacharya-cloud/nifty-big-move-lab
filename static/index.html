@@ -69,7 +69,7 @@ async function loadScan(){
   const m=d.market;
   const s=document.getElementById("signal");
   s.textContent=m.signal;s.className="signal "+(m.signal==="CALL"?"call":m.signal==="PUT"?"put":"wait");
-  document.getElementById("reason").textContent=m.reason;
+  document.getElementById("reason").textContent=m.reason + (d.interval_used ? " • Data: "+d.interval_used : "");
   document.getElementById("price").textContent=m.nifty??"--";
   document.getElementById("adx").textContent=m.adx??"--";
   document.getElementById("rsi").textContent=m.rsi??"--";
@@ -89,7 +89,7 @@ async function loadScan(){
   document.getElementById("option").innerHTML=o
    ? `<b>${o.type} ${o.strike}</b> • Expiry ${o.expiry}<br><br>Buy zone ₹${o.buy_zone_low}–₹${o.buy_zone_high} • LTP ₹${o.ltp}<br>SL ₹${o.stop} • T1 ₹${o.target1} • T2 ₹${o.target2}`
    : (d.option_error||"No option contract because there is no confirmed signal.");
- }catch(e){document.getElementById("err").innerHTML=`<div class="card" style="margin-bottom:18px;color:#ff6872">Error: ${e.message}</div>`}
+ }catch(e){document.getElementById("err").innerHTML=`<div class="card" style="margin-bottom:18px;color:#ff6872">Error: ${e.message}<br><small>Try Refresh Signal again. If this persists on Render, inspect the Render logs for Yahoo/network errors.</small></div>`}
 }
 loadScan();
 </script>
