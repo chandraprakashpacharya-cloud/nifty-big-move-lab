@@ -1,29 +1,168 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NIFTY 1-Day Options Engine</title><script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NIFTY 50 • Big Move Signal Lab</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#07090d;color:#e9edf5;font-family:Arial,sans-serif}.c{max-width:1400px;margin:auto;padding:28px}
-.top{display:flex;justify-content:space-between;align-items:center}.muted{color:#8993a5}h1{margin:0}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
-.card,.panel{background:#10141b;border:1px solid #202734;border-radius:14px;padding:20px}.label{font-size:12px;color:#8c96a8;text-transform:uppercase}.value{font-size:28px;font-weight:700;margin-top:8px}.signal{font-size:34px;font-weight:800}.call{color:#36d399}.put{color:#ff6b81}.wait{color:#f5c451}
-.controls{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}button,select{background:#161c25;border:1px solid #2c3544;color:#fff;padding:11px 15px;border-radius:9px}button{cursor:pointer}.primary{background:#6d28d9}
-.status{padding:8px 12px;border-radius:999px;background:#18201b;color:#61d39b}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #202734;text-align:left;font-size:13px}th{color:#8f99aa}
-@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.grid{grid-template-columns:1fr}.c{padding:15px}}
-</style></head><body><div class="c">
-<div class="top"><div><h1>NIFTY 1-Day Options Engine</h1><div class="muted">Previous 1–7 trading days → next-session CALL/PUT setup</div></div><span id="status" class="status">Ready</span></div>
-<div class="controls"><select id="period"><option>30d</option><option selected>60d</option><option>90d</option></select>
-<select id="interval"><option>5m</option><option selected>15m</option><option>30m</option><option>60m</option></select>
-<button class="primary" onclick="scan()">Live Scan</button><button onclick="bt()">Run 1-Day Options Backtest</button></div>
-<div class="grid"><div class="card"><div class="label">Signal</div><div id="signal" class="signal wait">WAIT</div></div>
-<div class="card"><div class="label">NIFTY</div><div id="price" class="value">—</div></div><div class="card"><div class="label">ADX</div><div id="adx" class="value">—</div></div><div class="card"><div class="label">Relative Volume</div><div id="rvol" class="value">—</div></div></div>
-<div class="panel"><h2>Live Engine</h2><div id="reasons" class="muted">Run Live Scan.</div></div>
-<div class="panel"><h2>Backtest Performance</h2><div id="metrics" class="muted">No backtest yet.</div></div>
-<div class="panel"><h2>Latest Trades</h2><div style="overflow:auto"><table><thead><tr><th>Date</th><th>Side</th><th>Strike</th><th>Spot Entry</th><th>Premium Entry</th><th>Premium Exit</th><th>P&L</th><th>Exit</th></tr></thead><tbody id="trades"></tbody></table></div></div>
-<div class="panel muted">Option premiums are modeled with Black-Scholes from NIFTY spot history. This is a research model, not a historical NSE option-premium backtest.</div>
+*{box-sizing:border-box}
+body{margin:0;background:#070b12;color:#eef3fb;font-family:Arial,sans-serif}
+.wrap{max-width:1500px;margin:auto;padding:28px}
+header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;border-bottom:1px solid #1e2937;padding-bottom:20px}
+h1{margin:0;font-size:30px}.sub{color:#91a0b5;margin-top:7px}
+.controls{display:flex;gap:10px;align-items:center}
+select,button{background:#111b29;border:1px solid #304057;color:white;border-radius:10px;padding:12px 16px;font-size:14px}
+button{background:#2563eb;cursor:pointer;font-weight:700}
+button:hover{filter:brightness(1.1)}
+.banner{margin:24px 0;padding:15px 18px;border:1px solid #243246;background:#0d1520;border-radius:14px;color:#aebbd0}
+.grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+.panel{background:#0d141f;border:1px solid #202c3c;border-radius:18px;padding:22px}
+.signal{font-size:72px;font-weight:900;margin:10px 0}
+.call{color:#36d399}.put{color:#ff647c}.wait{color:#f5bd45}
+.conf{font-size:16px;color:#94a3b8}.big{font-size:26px;font-weight:800}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
+.stat{background:#111c2a;border-radius:12px;padding:16px}.label{font-size:12px;color:#8796aa}.value{font-size:24px;font-weight:800;margin-top:7px}
+.checks{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:20px}
+.check{background:#111c2a;border-radius:12px;padding:14px}.ok{color:#35d399}.bad{color:#ff647c}
+.option{margin-top:18px;background:#111c2a;border-radius:14px;padding:18px}
+.optiongrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+table{width:100%;border-collapse:collapse;margin-top:14px}
+th,td{padding:10px;border-bottom:1px solid #202b3b;text-align:left;font-size:13px}th{color:#91a0b5}
+.note{font-size:12px;color:#8391a5;line-height:1.5;margin-top:15px}
+@media(max-width:950px){.grid{grid-template-columns:1fr}.stats,.checks,.optiongrid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.wrap{padding:15px}header{display:block}.controls{margin-top:15px}.stats,.checks,.optiongrid{grid-template-columns:1fr}.signal{font-size:55px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div>
+<h1>NIFTY 50 • Big Move Signal Lab</h1>
+<div class="sub">5-minute CALL / PUT decision engine • Render ready</div>
 </div>
+<div class="controls">
+<select id="interval">
+<option selected>5m</option><option>15m</option><option>30m</option><option>60m</option>
+</select>
+<button onclick="scan()">Refresh Signal</button>
+</div>
+</header>
+
+<div id="banner" class="banner">Press Refresh Signal to calculate the latest setup.</div>
+
+<div class="grid">
+<section class="panel">
+<div id="signal" class="signal wait">WAIT</div>
+<div class="conf">Confidence / score</div>
+<div id="score" class="big">—</div>
+
+<div class="stats">
+<div class="stat"><div class="label">NIFTY</div><div id="price" class="value">—</div></div>
+<div class="stat"><div class="label">VWAP</div><div id="vwap" class="value">—</div></div>
+<div class="stat"><div class="label">EMA 20</div><div id="ema20" class="value">—</div></div>
+<div class="stat"><div class="label">EMA 50</div><div id="ema50" class="value">—</div></div>
+<div class="stat"><div class="label">ADX</div><div id="adx" class="value">—</div></div>
+<div class="stat"><div class="label">RSI</div><div id="rsi" class="value">—</div></div>
+<div class="stat"><div class="label">ATR</div><div id="atr" class="value">—</div></div>
+<div class="stat"><div class="label">Range Expansion</div><div id="rvol" class="value">—</div></div>
+</div>
+
+<div class="checks">
+<div class="check"><div class="label">Signal score</div><div id="score2">—</div></div>
+<div class="check"><div class="label">Other side</div><div id="other">—</div></div>
+<div class="check"><div class="label">Timestamp</div><div id="time">—</div></div>
+<div class="check"><div class="label">Data</div><div id="data">Live</div></div>
+</div>
+
+<div class="option">
+<h2>Option Contract</h2>
+<div id="optionText">Option data appears when CALL/PUT is confirmed.</div>
+<div id="optionGrid" class="optiongrid" style="margin-top:15px"></div>
+</div>
+
+<div class="note" id="note"></div>
+</section>
+
+<section class="panel">
+<h2>Why this signal?</h2>
+<div id="reasons" class="note" style="font-size:15px">Waiting for scan...</div>
+<h2 style="margin-top:30px">Research Backtest</h2>
+<button onclick="backtest()">Run 1-Day Options Backtest</button>
+<div id="metrics" class="note">No backtest yet.</div>
+<div style="overflow:auto"><table>
+<thead><tr><th>Date</th><th>Side</th><th>Strike</th><th>Spot</th><th>Entry Premium</th><th>Exit Premium</th><th>P&L</th><th>Exit</th></tr></thead>
+<tbody id="trades"></tbody>
+</table></div>
+</section>
+</div>
+</div>
+
 <script>
-async function scan(){document.getElementById("status").textContent="Scanning...";try{let r=await fetch(`/api/scan?period=${period.value}&interval=${interval.value}`),j=await r.json();if(j.status!="ok")throw Error(j.error);
-let s=document.getElementById("signal");s.textContent=j.signal;s.className="signal "+(j.signal=="CALL"?"call":j.signal=="PUT"?"put":"wait");
-price.textContent=j.price;adx.textContent=j.adx;rvol.textContent=j.rvol+"x";reasons.textContent=j.reasons.length?j.reasons.join(" • "):"No qualifying setup.";status.textContent="Live"}catch(e){status.textContent="Error";reasons.textContent=e.message}}
-async function bt(){status.textContent="Backtesting...";try{let r=await fetch(`/api/option-backtest?period=${period.value}&interval=${interval.value}`),j=await r.json();if(j.status!="ok")throw Error(j.error);let m=j.metrics;
-metrics.innerHTML=`Trades: <b>${m.trades}</b> &nbsp; Wins: <b>${m.wins}</b> &nbsp; Losses: <b>${m.losses}</b> &nbsp; Win rate: <b>${m.win_rate}%</b> &nbsp; Net P&L: <b>₹${m.net_pnl}</b> &nbsp; Return: <b>${m.return_pct}%</b> &nbsp; Max DD: <b>₹${m.max_drawdown}</b> &nbsp; Final: <b>₹${m.final_equity}</b>`;
-trades.innerHTML="";j.trades.slice(-30).reverse().forEach(t=>{let tr=document.createElement("tr");tr.innerHTML=`<td>${t.date}</td><td>${t.side}</td><td>${t.strike}</td><td>${t.spot_entry}</td><td>${t.premium_entry}</td><td>${t.premium_exit}</td><td>₹${t.pnl}</td><td>${t.exit_reason}</td>`;trades.appendChild(tr)});status.textContent="Backtest complete"}catch(e){status.textContent="Error";metrics.textContent=e.message}}
-</script></body></html>
+const $=id=>document.getElementById(id);
+
+async function scan(){
+  $("banner").textContent="Scanning latest NIFTY candles...";
+  try{
+    const r=await fetch(`/api/scan?period=${$("interval").value==="5m"?"5d":"30d"}&interval=${$("interval").value}`);
+    const j=await r.json();
+    if(j.status!=="ok") throw new Error(j.error||"Scan failed");
+
+    $("banner").textContent="Signal calculated successfully.";
+    $("signal").textContent=j.signal;
+    $("signal").className="signal "+(j.signal==="CALL"?"call":j.signal==="PUT"?"put":"wait");
+    $("score").textContent=`${j.score}/7`;
+    $("price").textContent=j.price;
+    $("vwap").textContent=j.vwap;
+    $("ema20").textContent=j.ema20;
+    $("ema50").textContent=j.ema50;
+    $("adx").textContent=j.adx;
+    $("rsi").textContent=j.rsi;
+    $("atr").textContent=j.atr;
+    $("rvol").textContent=j.rvol+"x";
+    $("score2").textContent=j.score;
+    $("other").textContent=j.other_score;
+    $("time").textContent=j.timestamp;
+    $("reasons").innerHTML=j.reasons.length?j.reasons.map(x=>`<div style="margin:8px 0">✓ ${x}</div>`).join(""):"No qualifying setup.";
+    $("note").textContent=j.data_note||"";
+    renderOption(j.option,j.option_error);
+  }catch(e){
+    $("banner").textContent="Error: "+e.message;
+    $("signal").textContent="WAIT";
+    $("score").textContent="—";
+    $("reasons").textContent="The engine could not calculate a usable signal.";
+  }
+}
+
+function renderOption(o,err){
+  if(!o){
+    $("optionText").textContent=err||"No option contract selected because the signal is WAIT.";
+    $("optionGrid").innerHTML="";
+    return;
+  }
+  $("optionText").innerHTML=`<b>${o.type} ${o.strike}</b> • Expiry: ${o.expiry}`;
+  const vals=[
+    ["LTP",o.ltp],["Buy zone",`${o.buy_zone_low} – ${o.buy_zone_high}`],
+    ["Stop",o.stop],["Target 1",o.target1],["Target 2",o.target2]
+  ];
+  $("optionGrid").innerHTML=vals.map(v=>`<div class="stat"><div class="label">${v[0]}</div><div class="value">${v[1]}</div></div>`).join("");
+}
+
+async function backtest(){
+  $("metrics").textContent="Backtest running...";
+  try{
+    const r=await fetch(`/api/option-backtest?period=60d&interval=15m`);
+    const j=await r.json();
+    if(j.status!=="ok") throw new Error(j.error||"Backtest failed");
+    const m=j.metrics;
+    $("metrics").innerHTML=`Trades <b>${m.trades}</b> • Win rate <b>${m.win_rate}%</b> • Net P&L <b>₹${m.net_pnl}</b> • Return <b>${m.return_pct}%</b> • Max DD <b>₹${m.max_drawdown}</b> • Final equity <b>₹${m.final_equity}</b>`;
+    $("trades").innerHTML="";
+    j.trades.slice(-30).reverse().forEach(t=>{
+      const tr=document.createElement("tr");
+      tr.innerHTML=`<td>${t.date}</td><td>${t.side}</td><td>${t.strike}</td><td>${t.spot_entry}</td><td>${t.premium_entry}</td><td>${t.premium_exit}</td><td>₹${t.pnl}</td><td>${t.exit_reason}</td>`;
+      $("trades").appendChild(tr);
+    });
+  }catch(e){$("metrics").textContent="Backtest error: "+e.message}
+}
+</script>
+</body>
+</html>
