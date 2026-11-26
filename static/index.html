@@ -1,0 +1,127 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NIFTY Signal Lab</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#070b12;color:#e7edf7;font-family:Inter,Arial,sans-serif}
+.top{padding:22px 28px;border-bottom:1px solid #1d2735;display:flex;justify-content:space-between;align-items:center;background:#0a1019}
+.brand{font-size:24px;font-weight:800}.sub{color:#8e9bad;font-size:13px;margin-top:5px}
+button,select{background:#111a27;color:#e7edf7;border:1px solid #2b394b;border-radius:8px;padding:10px 14px;font-size:14px}
+button{cursor:pointer;background:#1b6cff;border-color:#1b6cff;font-weight:700}
+button:hover{filter:brightness(1.1)}select{margin-right:8px}
+.wrap{max-width:1400px;margin:0 auto;padding:24px}.grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px}
+.card{background:#0d141e;border:1px solid #1d2a39;border-radius:14px;padding:20px;box-shadow:0 8px 30px #0005}
+.signal{display:flex;justify-content:space-between;align-items:center;min-height:190px}
+.signal-word{font-size:62px;font-weight:900;letter-spacing:2px}.call{color:#21d39b}.put{color:#ff5b67}.wait{color:#f3b74d}
+.price{font-size:32px;font-weight:800;margin-top:8px}.muted{color:#8996a8}.small{font-size:12px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+.metric{background:#101a26;border-radius:10px;padding:14px}.metric b{display:block;font-size:18px;margin-top:5px}
+.option{margin-top:18px}.option h2{margin:0 0 15px}.optiongrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.tile{background:#101a26;border-radius:10px;padding:14px}.tile span{display:block;color:#8d9aac;font-size:12px}.tile b{display:block;font-size:20px;margin-top:6px}
+.buy{border:1px solid #1d7d61;background:#0d241e}.danger{border-color:#7b2d38;background:#241116}.target{border-color:#28608c;background:#0e1d2c}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}.check{padding:10px;border-radius:8px;background:#111a25;font-size:13px}.ok{color:#2bd49d}.no{color:#ff6c75}
+.reason{margin-top:15px;padding:13px;background:#111a25;border-left:3px solid #1b6cff;border-radius:6px;color:#bdc8d7}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}.optiongrid{grid-template-columns:1fr 1fr}.signal-word{font-size:46px}}
+</style>
+</head>
+<body>
+<header class="top">
+<div><div class="brand">NIFTY 50 • Big Move Signal Lab</div><div class="sub">5-minute CALL / PUT decision engine • Render ready</div></div>
+<div><select id="interval"><option>5m</option><option>15m</option><option>30m</option><option>60m</option></select><button onclick="scan()">Refresh Signal</button></div>
+</header>
+<main class="wrap">
+<div id="error"></div>
+<section class="grid">
+<div class="card">
+<div class="signal">
+<div><div id="signal" class="signal-word wait">WAIT</div><div class="price" id="nifty">--</div><div class="muted" id="time">Loading...</div></div>
+<div style="text-align:right"><div class="muted">Confidence</div><div id="confidence" style="font-size:38px;font-weight:900">--%</div><div class="muted">CALL <span id="cs">--</span>/8 • PUT <span id="ps">--</span>/8</div></div>
+</div>
+<div class="metrics">
+<div class="metric">VWAP<b id="vwap">--</b></div>
+<div class="metric">EMA 20<b id="ema20">--</b></div>
+<div class="metric">EMA 50<b id="ema50">--</b></div>
+<div class="metric">ADX<b id="adx">--</b></div>
+<div class="metric">RSI<b id="rsi">--</b></div>
+<div class="metric">RVOL<b id="rvol">--</b></div>
+<div class="metric">ATR<b id="atr">--</b></div>
+<div class="metric">Data<b>Live</b></div>
+</div>
+<div class="reason" id="reason">Waiting for scan...</div>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0">Trade Levels</h2>
+<div class="optiongrid">
+<div class="tile">NIFTY Entry<b id="ne">--</b></div>
+<div class="tile danger">NIFTY SL<b id="ns">--</b></div>
+<div class="tile target">NIFTY Target<b id="nt">--</b></div>
+<div class="tile">Risk / Reward<b>1 : 2</b></div>
+</div>
+<div class="option">
+<h2>Option Contract</h2>
+<div id="optbox" class="muted">Option data appears when a CALL/PUT signal is confirmed.</div>
+<div id="optiongrid" class="optiongrid" style="display:none">
+<div class="tile buy">BUY ZONE<b id="buy">--</b></div>
+<div class="tile danger">OPTION SL<b id="osl">--</b></div>
+<div class="tile target">TARGET 1<b id="t1">--</b></div>
+<div class="tile target">TARGET 2<b id="t2">--</b></div>
+</div>
+<div id="contract" style="margin-top:12px"></div>
+</div>
+</div>
+</section>
+
+<section class="card" style="margin-top:18px">
+<h2 style="margin-top:0">Signal Checks</h2>
+<div id="checks" class="checks"></div>
+<p class="small muted" style="margin-top:18px">Educational decision-support only. The option LTP is the observed market price and is not a guaranteed execution price. Do not use the signal as a substitute for risk management.</p>
+</section>
+</main>
+<script>
+async function scan(){
+ const err=document.getElementById('error'); err.innerHTML='';
+ try{
+  const interval=document.getElementById('interval').value;
+  const r=await fetch('/api/scan?interval='+encodeURIComponent(interval));
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error||'Scan failed');
+  const m=d.market;
+  const s=document.getElementById('signal');
+  s.textContent=m.signal;s.className='signal-word '+(m.signal==='CALL'?'call':m.signal==='PUT'?'put':'wait');
+  document.getElementById('nifty').textContent='NIFTY '+fmt(m.nifty);
+  document.getElementById('time').textContent=m.timestamp;
+  document.getElementById('confidence').textContent=m.confidence+'%';
+  document.getElementById('cs').textContent=m.call_score;
+  document.getElementById('ps').textContent=m.put_score;
+  ['vwap','ema20','ema50','adx','rsi','rvol','atr'].forEach(k=>document.getElementById(k).textContent=fmt(m[k]));
+  document.getElementById('ne').textContent=m.nifty_entry?fmt(m.nifty_entry):'--';
+  document.getElementById('ns').textContent=m.nifty_stop?fmt(m.nifty_stop):'--';
+  document.getElementById('nt').textContent=m.nifty_target?fmt(m.nifty_target):'--';
+  document.getElementById('reason').textContent=m.reason;
+  const checks=document.getElementById('checks'); checks.innerHTML='';
+  Object.entries(m.checks).forEach(([k,v])=>{checks.innerHTML+=`<div class="check ${v?'ok':'no'}">${v?'✓':'✕'} ${k}</div>`});
+  const og=document.getElementById('optiongrid'), ob=document.getElementById('optbox');
+  if(d.option){
+   og.style.display='grid';ob.style.display='none';
+   const o=d.option;
+   document.getElementById('buy').textContent='₹'+o.buy_zone_low+' – ₹'+o.buy_zone_high;
+   document.getElementById('osl').textContent='₹'+o.stop;
+   document.getElementById('t1').textContent='₹'+o.target1;
+   document.getElementById('t2').textContent='₹'+o.target2;
+   document.getElementById('contract').innerHTML=`<b>NIFTY ${o.strike} ${o.type}</b> &nbsp; • &nbsp; Expiry ${o.expiry} &nbsp; • &nbsp; LTP ₹${o.ltp}`;
+  }else{
+   og.style.display='none';ob.style.display='block';
+   ob.textContent=d.option_error||'No option contract selected because the signal is WAIT.';
+   document.getElementById('contract').innerHTML='';
+  }
+ }catch(e){err.innerHTML='<div class="card" style="color:#ff7780">Error: '+e.message+'</div>'}
+}
+function fmt(v){return v==null?'--':Number(v).toLocaleString('en-IN',{maximumFractionDigits:2})}
+scan();
+</script>
+</body>
+</html>
